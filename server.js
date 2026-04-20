@@ -141,7 +141,7 @@ async function start() {
     setupGracefulShutdown();
 
     // Start listening
-    httpServer.listen(PORT, () => {
+    const server = httpServer.listen(PORT, () => {
       console.log(`\n🚀 Server running in ${NODE_ENV} mode on port ${PORT}`);
       console.log(`   Local:  http://localhost:${PORT}`);
       if (NODE_ENV === 'production') {
@@ -149,6 +149,11 @@ async function start() {
       }
       console.log('');
     });
+
+    // Increase timeouts for large video uploads
+    server.timeout = 300000; // 5 minutes
+    server.keepAliveTimeout = 301000; 
+
   } catch (err) {
     console.error('❌ Failed to start server:', err.message);
     if (err.message.includes('timed out') || err.message.includes('querySrv')) {

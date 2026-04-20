@@ -1,5 +1,5 @@
 import express from 'express';
-import { getChats, getMessages, createChat, getAdminId, getAllAdminChats } from '../controllers/chatController.js';
+import { getChats, getMessages, createChat, getAdminId, getAllAdminChats, sendChatMessage } from '../controllers/chatController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -12,6 +12,7 @@ router.route('/')
 
 router.get('/admin-id', getAdminId);
 router.post('/initiate', createChat);
+router.post('/message', sendChatMessage);
 router.get('/all', getAllAdminChats); // MUST be before /:chatId
 router.get('/:chatId/messages', getMessages);
 

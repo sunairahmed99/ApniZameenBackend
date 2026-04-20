@@ -33,7 +33,11 @@ const PropertySchema = new mongoose.Schema({
     },
     propertyType: {
         type: String,
-        enum: ['House', 'Plot', 'Flat', 'Commercial', 'Upper Portion', 'Lower Portion', 'Farm House', 'Room', 'Penthouse'],
+        enum: [
+            'House', 'Flat', 'Farm House', 'Upper Portion', 'Lower Portion', 'Penthouse', 'Room',
+            'Residential Plot', 'Commercial Plot', 'Agricultural Land', 'Industrial Land', 'Plot File',
+            'Office', 'Shop', 'Warehouse', 'Factory', 'Building', 'Other'
+        ],
         required: true
     },
     price: {
@@ -107,6 +111,10 @@ const PropertySchema = new mongoose.Schema({
     planId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'PropertyPlan'
+    },
+    agencyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Agency'
     }
 
 }, { timestamps: true });

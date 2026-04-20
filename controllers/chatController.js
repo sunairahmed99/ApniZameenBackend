@@ -2,6 +2,7 @@ import asyncHandler from 'express-async-handler';
 import Chat from '../models/Chat.js';
 import Message from '../models/Message.js';
 import Seller from '../models/Seller.js';
+import Property from '../models/Property.js';
 
 // Helper to safely get string ID from any format (ObjectId or String or Object)
 const getSafeId = (input) => {
@@ -72,35 +73,68 @@ export const getMessages = asyncHandler(async (req, res) => {
 });
 
 // @desc    Create or get a chat between two participants
-// @route   POST /api/chats/initiate
-// @access  Private
 export const createChat = asyncHandler(async (req, res) => {
     const { recipientId, userId, propertyId, sellerId } = req.body;
 
-    // The frontend might send recipientId, or userId (when chatting with admin/other)
-    const targetRecipientId = recipientId || userId;
-    const currentUserId = req.seller?._id || sellerId;
-
-    if (!currentUserId) {
+    const senderId = req.seller?._id;
+    
+    if (!senderId) {
         res.status(401);
         throw new Error('User not logged in');
     }
 
+    // Determine target recipient (handle various frontend naming conventions)
+    let targetRecipientId = recipientId;
+    
+    // 1. Resolve Recipient (if not direct)
+    if (!targetRecipientId) {
+        // If recipientId not provided, check if either sellerId or userId is someone other than the sender
+        if (sellerId && sellerId.toString() !== senderId.toString()) {
+            targetRecipientId = sellerId;
+        } else if (userId && userId.toString() !== senderId.toString()) {
+            targetRecipientId = userId;
+        }
+    }
+
+    // 2. Resolve via Property if still missing
+    if (!targetRecipientId && propertyId) {
+        const property = await Property.findById(propertyId);
+        if (property && property.sellerId) {
+            targetRecipientId = property.sellerId;
+        }
+    }
+
+    // 3. Admin Fallback (Absolute fail-safe)
+    if (!targetRecipientId || targetRecipientId.toString() === senderId.toString()) {
+        const admin = await Seller.findOne({ role: 'admin' }).select('_id');
+        if (admin && admin._id.toString() !== senderId.toString()) {
+            targetRecipientId = admin._id;
+        }
+    }
+
+    // 4. Final Validation
     if (!targetRecipientId) {
         res.status(400);
-        throw new Error('Recipient ID is required');
+        throw new Error('Valid recipient ID is required');
+    }
+
+    if (senderId.toString() === targetRecipientId.toString()) {
+        res.status(400);
+        throw new Error('Cannot start a chat with yourself');
     }
 
     // Check if chat already exists between these participants (and property if provided)
     const query = {
-        participants: { $all: [currentUserId, targetRecipientId] }
+        participants: { $all: [senderId, targetRecipientId] }
     };
     
     if (propertyId) {
         query.propertyId = propertyId;
     }
 
-    let chat = await Chat.findOne(query);
+    let chat = await Chat.findOne(query)
+        .populate('participants', 'name')
+        .populate('propertyId', 'title images');
 
     if (chat) {
         return res.json(chat);
@@ -108,14 +142,14 @@ export const createChat = asyncHandler(async (req, res) => {
 
     // If not exists, create new chat
     chat = new Chat({
-        participants: [req.seller._id, targetRecipientId],
+        participants: [senderId, targetRecipientId],
         propertyId
     });
 
-    const savedChat = await chat.save();
+    await chat.save();
     
-    // Populate and return
-    const fullChat = await Chat.findById(savedChat._id)
+    // Populate and return (ensure we find it again to get full population)
+    const fullChat = await Chat.findById(chat._id)
         .populate('participants', 'name')
         .populate('propertyId', 'title images');
 
@@ -176,3 +210,48 @@ export const getAllAdminChats = asyncHandler(async (req, res) => {
     // Merge existing chats and pseudo chats
     res.json([...allChats, ...syntheticChats]);
 });
+
+/**
+ * Send a message via HTTP (Reliability fix for Vercel)
+ */
+export const sendChatMessage = async (req, res) => {
+    const { chatId, text } = req.body;
+    const senderId = req.seller?._id || req.user?._id || req.admin?._id;
+
+    if (!chatId || !text) {
+        return res.status(400).json({ message: 'Chat ID and text are required.' });
+    }
+
+    try {
+        // 1. Create message
+        const newMessage = new Message({
+            chatId,
+            senderId,
+            text
+        });
+        await newMessage.save();
+
+        // 2. Update Chat
+        const updatedChat = await Chat.findByIdAndUpdate(chatId, {
+            lastMessage: {
+                text,
+                sender: senderId,
+                timestamp: new Date(),
+            },
+            updatedAt: new Date(),
+        }, { new: true }).populate('participants', 'name');
+
+        // 3. Emit real-time via Socket
+        const io = req.app.get('io');
+        if (io) {
+            io.to(chatId).emit('receive_message', newMessage);
+            // Also notify participants list of the update for sorting
+            io.emit('chat_updated', updatedChat);
+        }
+
+        res.status(201).json(newMessage);
+    } catch (err) {
+        console.error('Error in sendChatMessage:', err);
+        res.status(500).json({ message: err.message });
+    }
+};

@@ -80,6 +80,7 @@ export const createProperty = async (req, res) => {
 
     const newProperty = new Property({
       ...propertyData,
+      agencyId: req.body.agency || null,
       isFeatured: targetSubscription ? targetSubscription.dealId?.planType === 'featured' : seller.currentDeal?.planType === 'featured',
       expiryDate: targetSubscription ? targetSubscription.expiryDate : seller.quotaExpiry
     });
@@ -109,7 +110,21 @@ export const createProperty = async (req, res) => {
     await newProperty.save();
     res.status(201).json(newProperty);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ Property Creation Error:", error);
+    
+    // Check for Mongoose validation errors
+    if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(err => err.message);
+        return res.status(400).json({ 
+            message: "Validation Error", 
+            details: messages.join(', ') 
+        });
+    }
+
+    res.status(500).json({ 
+        message: "Failed to save property to database",
+        details: error.message 
+    });
   }
 };
 
@@ -272,8 +287,19 @@ export const getProperties = async (req, res) => {
       {
         $lookup: {
           from: 'agencies',
-          localField: 'seller._id',
-          foreignField: 'ownerId',
+          let: { aid: '$agencyId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$aid", null] },
+                    { $eq: ["$_id", "$$aid"] }
+                  ]
+                }
+              }
+            }
+          ],
           as: 'agency'
         }
       },
@@ -309,6 +335,9 @@ export const getProperties = async (req, res) => {
           createdAt: 1,
           isBoosted: 1,
           isFeatured: 1,
+          whatsapp: 1,
+          email: 1,
+          phone: 1,
           seller: {
             name: '$seller.name'
           }
@@ -521,8 +550,19 @@ export const adminGetProperties = async (req, res) => {
       {
         $lookup: {
           from: 'agencies',
-          localField: 'seller._id',
-          foreignField: 'ownerId',
+          let: { aid: '$agencyId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$aid", null] },
+                    { $eq: ["$_id", "$$aid"] }
+                  ]
+                }
+              }
+            }
+          ],
           as: 'agency'
         }
       },
@@ -826,12 +866,13 @@ export const getPropertyById = async (req, res) => {
       .lean();
     if (!property) return res.status(404).json({ message: "Property not found" });
 
-    // Try to find Agency for this seller
-    if (property.sellerId) {
-      const agency = await Agency.findOne({ ownerId: property.sellerId._id }).select('name').lean();
-      if (agency) {
-        property.sellerId.name = agency.name; // Prioritize Agency name
-      }
+    // Try to find Agency for this property or seller
+    if (property.agencyId) {
+      const agency = await Agency.findById(property.agencyId).select('name phone').lean();
+      if (agency) property.agency = agency;
+    } else if (property.sellerId) {
+      const agency = await Agency.findOne({ ownerId: property.sellerId._id }).select('name phone').lean();
+      if (agency) property.agency = agency;
     }
 
     res.status(200).json(property);

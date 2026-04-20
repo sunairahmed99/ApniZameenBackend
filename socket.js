@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Chat from './models/Chat.js';
 import Message from './models/Message.js';
 
@@ -29,24 +30,45 @@ const initializeSocket = (io) => {
     socket.on('send_message', async (data) => {
       const { chatId, senderId, text } = data;
 
+      if (!chatId || !senderId || !text) {
+        console.error('Socket send_message error: Missing required fields', { chatId, senderId, text: !!text });
+        return;
+      }
+
       try {
-        const newMessage = new Message({ chatId, senderId, text });
+        // Ensure IDs are valid ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(chatId) || !mongoose.Types.ObjectId.isValid(senderId)) {
+          throw new Error(`Invalid ObjectId format: chatId=${chatId}, senderId=${senderId}`);
+        }
+
+        const newMessage = new Message({ 
+          chatId: new mongoose.Types.ObjectId(chatId), 
+          senderId: new mongoose.Types.ObjectId(senderId), 
+          text 
+        });
         await newMessage.save();
 
         // Update Chat lastMessage
-        await Chat.findByIdAndUpdate(chatId, {
+        const updatedChat = await Chat.findByIdAndUpdate(chatId, {
           lastMessage: {
             text,
             sender: senderId,
             timestamp: new Date(),
           },
           updatedAt: new Date(),
-        });
+        }, { new: true });
+
+        if (!updatedChat) {
+          console.warn(`Socket send_message: Chat ${chatId} not found for update`);
+        }
 
         // Emit to room (excluding sender)
         socket.to(chatId).emit('receive_message', newMessage);
+        console.log(`✉️ Message saved & emitted: Chat ${chatId}`);
       } catch (err) {
-        console.error('Socket send_message error:', err.message);
+        console.error('❌ Socket send_message error:', err.message);
+        // Optionally send error status back to user
+        socket.emit('message_error', { error: err.message, chatId });
       }
     });
 
