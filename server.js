@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -17,9 +16,12 @@ import projectPlanRoutes from './routes/projectPlanRoutes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ===================== DNS Fix for MongoDB Atlas SRV =====================
-dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
-dns.setDefaultResultOrder('ipv4first');
+
+// ===================== DNS & Node Fix for SRV =====================
+// Force Node to use public DNS servers (Google + Cloudflare)
+dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
+// Force IPv4 resolution to avoid Node + Atlas SRV issues
+dns.setDefaultResultOrder("ipv4first");
 
 // ===================== Config =====================
 const PORT = process.env.PORT || 5000;
@@ -55,7 +57,7 @@ app.use('/api/project-plans', projectPlanRoutes);
 // ===================== Serve Frontend in Production =====================
 if (NODE_ENV === 'production') {
   const frontendBuildPath = path.join(__dirname, '..', 'project', 'dist');
-  
+
   // Serve static files from React build
   app.use(express.static(frontendBuildPath));
 
@@ -80,7 +82,7 @@ async function checkInternet() {
 function setupGracefulShutdown() {
   const shutdown = async (signal) => {
     console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
-    
+
     httpServer.close(() => {
       console.log('✅ HTTP server closed');
     });
@@ -152,7 +154,7 @@ async function start() {
 
     // Increase timeouts for large video uploads
     server.timeout = 300000; // 5 minutes
-    server.keepAliveTimeout = 301000; 
+    server.keepAliveTimeout = 301000;
 
   } catch (err) {
     console.error('❌ Failed to start server:', err.message);

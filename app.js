@@ -25,7 +25,6 @@ import paymentRouter from './routes/paymentRoutes.js';
 import paymentPriceRouter from './routes/paymentPriceRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
 import analyticsRouter from './routes/analyticsRoutes.js';
 import jobRouter from './routes/jobRoutes.js';
 
@@ -33,6 +32,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+
 
 // ============================================
 // RATE LIMITING CONFIGURATION
