@@ -12,15 +12,21 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configure Multer for Cloudinary with Video Support
+// Configure Multer for Cloudinary with Dynamic Resource Typing
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: 'zameen_clone_properties',
-        resource_type: 'auto', // CRITICAL: This allows videos, images, and other files
-        allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'mp4', 'mkv', 'mov', 'avi'],
-        // Note: transformation is generally for images. Cloudinary handles video differently.
-        // We keep it empty or minimal for 'auto' resource types to avoid errors with videos.
+    params: async (req, file) => {
+        const isVideo = file.mimetype.startsWith('video/');
+        return {
+            folder: 'zameen_clone_properties',
+            resource_type: isVideo ? 'video' : 'image',
+            allowed_formats: isVideo 
+                ? ['mp4', 'mkv', 'mov', 'avi'] 
+                : ['jpg', 'png', 'jpeg', 'webp'],
+            chunk_size: isVideo ? 6000000 : undefined, // ~6MB chunks for videos
+            // Set public_id to preserve filenames or add unique suffix
+            public_id: `${Date.now()}-${file.originalname.split('.')[0]}`,
+        };
     },
 });
 
