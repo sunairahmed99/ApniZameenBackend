@@ -1,5 +1,12 @@
 import mongoose from 'mongoose';
 
+const MarkerSchema = new mongoose.Schema({
+  name: { type: String },
+  type: { type: String },
+  lat: { type: Number },
+  lng: { type: Number }
+}, { _id: false });
+
 const ProjectSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -39,7 +46,7 @@ const ProjectSchema = new mongoose.Schema({
   thumbnail: String,
   gallery: [String],
   description: String,
-
+  
   developer: {
     name: String,
     logo: String,
@@ -104,14 +111,7 @@ const ProjectSchema = new mongoose.Schema({
   location: {
     lat: Number,
     lng: Number,
-    markers: [
-      {
-        name: String,
-        type: String, // schools, hospitals, etc.
-        lat: Number,
-        lng: Number
-      }
-    ]
+    markers: [MarkerSchema]
   },
 
   threeDWalkthroughUrl: String,

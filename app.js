@@ -27,6 +27,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import analyticsRouter from './routes/analyticsRoutes.js';
 import jobRouter from './routes/jobRoutes.js';
+import jobApplicationRoutes from './routes/jobApplicationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -110,6 +111,7 @@ app.use('/api/payments', paymentRouter);
 app.use('/api/payment-prices', paymentPriceRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/jobs', jobRouter);
+app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/settings', settingsRoutes);
 
 

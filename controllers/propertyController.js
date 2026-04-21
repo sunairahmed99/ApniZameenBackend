@@ -81,7 +81,8 @@ export const createProperty = async (req, res) => {
     const newProperty = new Property({
       ...propertyData,
       agencyId: req.body.agency || null,
-      isFeatured: targetSubscription ? targetSubscription.dealId?.planType === 'featured' : seller.currentDeal?.planType === 'featured',
+      isTitanium: targetSubscription ? targetSubscription.dealId?.planType === 'titanium' : seller.currentDeal?.planType === 'titanium',
+      isFeatured: targetSubscription ? targetSubscription.dealId?.planType === 'titanium' : seller.currentDeal?.planType === 'titanium',
       expiryDate: targetSubscription ? targetSubscription.expiryDate : seller.quotaExpiry
     });
 
@@ -131,12 +132,13 @@ export const createProperty = async (req, res) => {
 // Get All Properties (for public/search with filters)
 export const getProperties = async (req, res) => {
   try {
-    const { city, purpose, type, category, minPrice, maxPrice, search, location, sellerId, featured } = req.query;
+    const { city, purpose, type, category, minPrice, maxPrice, search, location, sellerId, featured, titanium } = req.query;
 
     const queryParts = [{ status: "approved" }];
 
     if (sellerId) queryParts.push({ sellerId });
     if (featured === 'true') queryParts.push({ isFeatured: true });
+    if (titanium === 'true') queryParts.push({ isTitanium: true });
 
     if (city) queryParts.push({ city: { $regex: new RegExp(`^${city}$`, "i") } });
 
@@ -258,21 +260,15 @@ export const getProperties = async (req, res) => {
     // Limit results
     const limit = req.query.limit ? parseInt(req.query.limit) : 100;
 
-    // BROAD SEARCH RANDOMIZATION
-    const isBroadSearch = city && !type && !category && !location && !search && !minPrice && !maxPrice;
-    
+    // SORTING LOGIC: Latest first within tiers (Boosted > Titanium > Featured > Regular)
     const pipeline = [
       { $match: query },
-      ...(isBroadSearch ? [{ $sample: { size: limit } }] : []),
       {
-        $sort: (isBroadSearch ? {
+        $sort: {
           isBoosted: -1,
-          isFeatured: -1,
-        } : {
-          isBoosted: -1,
-          isFeatured: -1,
+          isTitanium: -1,
           createdAt: -1
-        })
+        }
       },
       { $limit: limit }, 
       {
@@ -335,6 +331,7 @@ export const getProperties = async (req, res) => {
           createdAt: 1,
           isBoosted: 1,
           isFeatured: 1,
+          isTitanium: 1,
           whatsapp: 1,
           email: 1,
           phone: 1,
@@ -579,6 +576,7 @@ export const adminGetProperties = async (req, res) => {
           status: 1,
           isBoosted: 1,
           isFeatured: 1,
+          isTitanium: 1,
           createdAt: 1,
           whatsapp: 1,
           email: 1,

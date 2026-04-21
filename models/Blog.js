@@ -38,8 +38,8 @@ const BlogSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-BlogSchema.pre('save', async function (next) {
-    if (!this.isModified('title')) return next();
+BlogSchema.pre('save', async function () {
+    if (!this.isModified('title')) return;
 
     if (!this.slug) {
         this.slug = this.title
@@ -47,7 +47,6 @@ BlogSchema.pre('save', async function (next) {
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/(^-|-$)+/g, '');
     }
-    next();
 });
 
 // Indexes - slug index is created automatically by unique: true

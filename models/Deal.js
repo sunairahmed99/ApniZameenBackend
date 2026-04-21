@@ -19,7 +19,7 @@ const dealSchema = new mongoose.Schema({
     },
     planType: {
         type: String,
-        enum: ['standard', 'featured'],
+        enum: ['standard', 'titanium'],
         default: 'standard',
         required: true
     },

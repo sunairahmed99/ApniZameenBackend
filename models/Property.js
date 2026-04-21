@@ -100,6 +100,10 @@ const PropertySchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isTitanium: {
+        type: Boolean,
+        default: false
+    },
     isVerified: {
         type: Boolean,
         default: false
@@ -123,12 +127,12 @@ const PropertySchema = new mongoose.Schema({
 PropertySchema.index({ status: 1, city: 1, purpose: 1, propertyType: 1 });
 PropertySchema.index({ price: 1 });
 PropertySchema.index({ createdAt: -1 });
-PropertySchema.index({ isBoosted: -1, isFeatured: -1, createdAt: -1 });
+PropertySchema.index({ isBoosted: -1, isTitanium: -1, isFeatured: -1, createdAt: -1 });
 PropertySchema.index({ sellerId: 1 });
 PropertySchema.index({ status: 1, areaName: 1 }); // Optimize Search by Area
 PropertySchema.index({ status: 1, title: 1 }); // Optimize Search by Title (Regex)
 PropertySchema.index({ sellerId: 1, status: 1, expiryDate: 1 }); // For seller dashboard stats
-PropertySchema.index({ sellerId: 1, isBoosted: 1, isFeatured: 1 }); // For boosted/featured count
+PropertySchema.index({ sellerId: 1, isBoosted: 1, isTitanium: 1, isFeatured: 1 }); // For boosted/featured/titanium count
 PropertySchema.index({ title: 'text', description: 'text' });
 
 export default mongoose.model("Property", PropertySchema);
