@@ -11,7 +11,6 @@ const initializeSocket = (io) => {
   const onlineUsers = new Map();
 
   io.on('connection', (socket) => {
-    console.log(`⚡ Socket connected: ${socket.id}`);
 
     // Track user online status
     socket.on('user_online', (userId) => {
@@ -64,7 +63,6 @@ const initializeSocket = (io) => {
 
         // Emit to room (excluding sender)
         socket.to(chatId).emit('receive_message', newMessage);
-        console.log(`✉️ Message saved & emitted: Chat ${chatId}`);
       } catch (err) {
         console.error('❌ Socket send_message error:', err.message);
         // Optionally send error status back to user

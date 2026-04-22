@@ -145,18 +145,22 @@ export const getProperties = async (req, res) => {
     // Broad location/area match (Checks areaName, blockName, and address)
     if (location) {
       const locationStr = Array.isArray(location) ? location[0] : location;
-      let cleanLoc = locationStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        .replace(/[-_\s]+/g, '[-\\s_]+')
-        .replace(/([a-zA-Z])([0-9])/g, '$1[-\\s_]*$2')
-        .replace(/([0-9])([a-zA-Z])/g, '$1[-\\s_]*$2');
-
-      queryParts.push({
-        $or: [
-          { areaName: { $regex: cleanLoc, $options: 'i' } },
-          { blockName: { $regex: cleanLoc, $options: 'i' } },
-          { address: { $regex: cleanLoc, $options: 'i' } }
-        ]
+      const terms = locationStr.split(/\s+/).filter(t => t.length > 0);
+      
+      const termQueries = terms.map(term => {
+        const cleanTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return {
+          $or: [
+            { areaName: { $regex: cleanTerm, $options: 'i' } },
+            { blockName: { $regex: cleanTerm, $options: 'i' } },
+            { address: { $regex: cleanTerm, $options: 'i' } }
+          ]
+        };
       });
+
+      if (termQueries.length > 0) {
+        queryParts.push({ $and: termQueries });
+      }
     }
 
     // Map frontend terms to database values
@@ -361,18 +365,22 @@ export const getSearchCounts = async (req, res) => {
 
     if (location) {
       const locationStr = Array.isArray(location) ? location[0] : location;
-      let cleanLoc = locationStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-        .replace(/[-_\s]+/g, '[-\\s_]+')
-        .replace(/([a-zA-Z])([0-9])/g, '$1[-\\s_]*$2')
-        .replace(/([0-9])([a-zA-Z])/g, '$1[-\\s_]*$2');
-
-      queryParts.push({
-        $or: [
-          { areaName: { $regex: cleanLoc, $options: 'i' } },
-          { blockName: { $regex: cleanLoc, $options: 'i' } },
-          { address: { $regex: cleanLoc, $options: 'i' } }
-        ]
+      const terms = locationStr.split(/\s+/).filter(t => t.length > 0);
+      
+      const termQueries = terms.map(term => {
+        const cleanTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return {
+          $or: [
+            { areaName: { $regex: cleanTerm, $options: 'i' } },
+            { blockName: { $regex: cleanTerm, $options: 'i' } },
+            { address: { $regex: cleanTerm, $options: 'i' } }
+          ]
+        };
       });
+
+      if (termQueries.length > 0) {
+        queryParts.push({ $and: termQueries });
+      }
     }
 
     if (purpose) {
@@ -821,7 +829,12 @@ export const getDynamicHomepageBoxes = async (req, res) => {
           query: { areaMin: a._id.value, areaMax: a._id.value, areaUnit: a._id.unit, city: city, type: pTypeParam }
         })),
         popular: popular.map(p => {
-          const title = p._id.block ? `${p._id.area} ${p._id.block}` : p._id.area;
+          // Prevent redundant names (e.g., "Gadap Town Gadap Town" -> "Gadap Town")
+          let title = p._id.area;
+          if (p._id.block && p._id.block.toLowerCase() !== p._id.area.toLowerCase()) {
+            title = `${p._id.area} ${p._id.block}`;
+          }
+          
           return {
             title,
             subtitle: `${p.count} Properties`,
