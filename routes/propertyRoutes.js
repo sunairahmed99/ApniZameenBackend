@@ -1,7 +1,7 @@
 import express from 'express';
 import {
     createProperty, getProperties, adminGetProperties, updatePropertyAdmin, deleteProperty, getPropertyTypes, getPropertyCounts, getSearchCounts,
-    getPropertyById, getPropertyBySlug, getSellerDashboardStats, getMyPropertiesList, incrementPropertyViews, incrementPropertyLeads, getDynamicHomepageBoxes, updatePropertySeller, getSellerScoreboard, renewProperty
+    getPropertyById, getPropertyBySlug, getSellerDashboardStats, getMyPropertiesList, incrementPropertyViews, incrementPropertyLeads, getDynamicHomepageBoxes, updatePropertySeller, getSellerScoreboard, renewProperty, getUploadSignature
 } from '../controllers/propertyController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { getLocations, addLocation, deleteLocation } from '../controllers/locationController.js';
@@ -17,9 +17,10 @@ router.delete('/locations/:id', deleteLocation);
 
 // Config API
 router.get('/types', getPropertyTypes);
+router.get('/upload-signature', protect, getUploadSignature);
 
 // Property Routes
-router.post('/', uploadPropertyMedia.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), createProperty);
+router.post('/', uploadPropertyMedia.fields([{ name: 'images', maxCount: 10 }]), createProperty);
 router.get('/', getProperties);
 router.get('/search', getProperties);
 router.get('/search-counts', getSearchCounts);
@@ -40,7 +41,7 @@ router.get('/seller/list', protect, getMyPropertiesList);
 // PATCH: Status-only update (JSON body, no file upload)
 router.patch('/seller/:id/status', protect, updatePropertySeller);
 // PUT: Full property edit (multipart/form-data with file uploads)
-router.put('/seller/:id', protect, uploadPropertyMedia.fields([{ name: 'images', maxCount: 10 }, { name: 'video', maxCount: 1 }]), updatePropertySeller);
+router.put('/seller/:id', protect, uploadPropertyMedia.fields([{ name: 'images', maxCount: 10 }]), updatePropertySeller);
 router.post('/renew/:id', protect, renewProperty);
 
 export default router;

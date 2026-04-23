@@ -36,9 +36,7 @@ const projectFields = [
   { name: 'projectFloorPlans', maxCount: 10 },
   { name: 'projectPaymentPlans', maxCount: 5 },
   { name: 'updateImages', maxCount: 10 },
-  { name: 'unitFloorPlans', maxCount: 20 },
-  { name: 'threeDWalkthroughFile', maxCount: 1 },
-  { name: 'videoFile', maxCount: 1 }
+  { name: 'unitFloorPlans', maxCount: 20 }
 ];
 
 projectRouter

@@ -65,13 +65,9 @@ const PropertySchema = new mongoose.Schema({
     bedrooms: Number,
     bathrooms: Number,
 
-    // Media (Cloudinary URLs)
     images: [{
         type: String
     }],
-    video: {
-        type: String // URL
-    },
 
     // Analytics
     views: {

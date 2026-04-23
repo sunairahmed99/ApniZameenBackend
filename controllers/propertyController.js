@@ -6,6 +6,38 @@ import SubscriptionRequest from "../models/SubscriptionRequest.js";
 import Chat from "../models/Chat.js";
 import Message from "../models/Message.js";
 import Inquiry from "../models/Inquiry.js";
+import { v2 as cloudinary } from 'cloudinary';
+
+
+// Get Cloudinary Upload Signature
+export const getUploadSignature = async (req, res) => {
+    try {
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        const folder = 'zameen_clone_properties';
+        
+        // resource_type should be handled by frontend (image or video)
+        const paramsToSign = {
+            timestamp: timestamp,
+            folder: folder,
+        };
+
+        const signature = cloudinary.utils.api_sign_request(
+            paramsToSign,
+            process.env.CLOUDINARY_API_SECRET
+        );
+
+        res.status(200).json({
+            signature,
+            timestamp,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            folder
+        });
+    } catch (error) {
+        console.error("❌ Signature Error:", error);
+        res.status(500).json({ message: "Failed to generate upload signature" });
+    }
+};
 
 // Create Property
 export const createProperty = async (req, res) => {
@@ -104,10 +136,13 @@ export const createProperty = async (req, res) => {
       if (req.files.images) {
         newProperty.images = req.files.images.map((f) => f.path);
       }
-      if (req.files.video) {
-        newProperty.video = req.files.video[0].path;
-      }
     }
+
+    // Handle Direct Upload URLs from body (if provided)
+    if (req.body.images && Array.isArray(req.body.images)) {
+        newProperty.images = [...(newProperty.images || []), ...req.body.images];
+    }
+
     await newProperty.save();
     res.status(201).json(newProperty);
   } catch (error) {
@@ -675,9 +710,10 @@ export const updatePropertySeller = async (req, res) => {
     const mergedImages = [...keptImages, ...newUploadedImages].slice(0, 7);
     if (mergedImages.length > 0) propertyData.images = mergedImages;
 
-    // Replace video only if new one uploaded
-    if (req.files?.video?.length > 0) {
-      propertyData.video = req.files.video[0].path;
+    if (req.body.images && Array.isArray(req.body.images)) {
+        // Here we assume body.images contains the full new set or just additions?
+        // Let's assume it's the full final set of images for consistency with frontend logic
+        propertyData.images = req.body.images;
     }
 
     const updatedProperty = await Property.findByIdAndUpdate(id, propertyData, { new: true });

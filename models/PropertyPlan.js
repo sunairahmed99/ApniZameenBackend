@@ -25,10 +25,6 @@ const PropertyPlanSchema = new mongoose.Schema({
         type: Number,
         default: 3
     },
-    videoAllowed: {
-        type: Boolean,
-        default: false
-    },
     isActive: {
         type: Boolean,
         default: true

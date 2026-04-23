@@ -114,9 +114,6 @@ const ProjectSchema = new mongoose.Schema({
     markers: [MarkerSchema]
   },
 
-  threeDWalkthroughUrl: String,
-  videoUrl: String,
-
   isHot: {
     type: Boolean,
     default: false
